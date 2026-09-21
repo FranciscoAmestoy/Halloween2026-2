@@ -188,7 +188,7 @@ function buildMazeWalls(){
     for(var c=0;c<12;c++){
       var wall=false;
       if(r===0||r===11||c===0||c===11) wall=true;
-      else if(r%2===0 && c%2===0) wall=true;
+      else if(r%2===0 && c%2===0 && r<10 && c<10) wall=true;
       row.push(wall);
     }
     g.push(row);
@@ -219,7 +219,7 @@ function createMaze(){
       }
       this.eaten=0;
       this.target=Math.ceil(this.totalDots*0.5);
-      this.moveInterval=95; this.ghostInterval=170;
+      this.moveInterval=380; this.ghostInterval=170;
       this.player={r:1,c:1,pr:1,pc:1,dir:"right"};
       this.ghosts=[{r:9,c:9,pr:9,pc:9,emoji:"👻"},{r:9,c:3,pr:9,pc:3,emoji:"🧟"}];
       this.playerTimer=0; this.ghostTimer=0;
