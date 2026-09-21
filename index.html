@@ -134,12 +134,13 @@ var runesRow=document.getElementById("runesRow");
 
 /* ---------- input ---------- */
 var keys={left:false,right:false,up:false,down:false,shoot:false};
+var queuedDir=null;
 window.addEventListener("keydown",function(e){
   var k=e.key;
-  if(k==="ArrowLeft"||k==="a"||k==="A") keys.left=true;
-  if(k==="ArrowRight"||k==="d"||k==="D") keys.right=true;
-  if(k==="ArrowUp"||k==="w"||k==="W") keys.up=true;
-  if(k==="ArrowDown"||k==="s"||k==="S") keys.down=true;
+  if(k==="ArrowLeft"||k==="a"||k==="A"){ keys.left=true; queuedDir="left"; }
+  if(k==="ArrowRight"||k==="d"||k==="D"){ keys.right=true; queuedDir="right"; }
+  if(k==="ArrowUp"||k==="w"||k==="W"){ keys.up=true; queuedDir="up"; }
+  if(k==="ArrowDown"||k==="s"||k==="S"){ keys.down=true; queuedDir="down"; }
   if(k===" "||k==="Enter"){ keys.shoot=true; e.preventDefault(); }
 });
 window.addEventListener("keyup",function(e){
@@ -152,7 +153,7 @@ window.addEventListener("keyup",function(e){
 });
 function bindBtn(id,prop){
   var el=document.getElementById(id);
-  ["pointerdown"].forEach(function(ev){el.addEventListener(ev,function(e){e.preventDefault();keys[prop]=true;});});
+  ["pointerdown"].forEach(function(ev){el.addEventListener(ev,function(e){e.preventDefault();keys[prop]=true;if(prop!=="shoot")queuedDir=prop;});});
   ["pointerup","pointerleave","pointercancel"].forEach(function(ev){el.addEventListener(ev,function(){keys[prop]=false;});});
 }
 bindBtn("btnUp","up");bindBtn("btnDown","down");bindBtn("btnLeft","left");bindBtn("btnRight","right");bindBtn("btnShoot","shoot");
@@ -182,13 +183,13 @@ var stageIdx=0, mode="menu", collectedRunes=[];
 
 /* ================= MAZE ================= */
 function buildMazeWalls(){
-  var g=[];
-  for(var r=0;r<12;r++){
+  var g=[], N=11;
+  for(var r=0;r<N;r++){
     var row=[];
-    for(var c=0;c<12;c++){
+    for(var c=0;c<N;c++){
       var wall=false;
-      if(r===0||r===11||c===0||c===11) wall=true;
-      else if(r%2===0 && c%2===0 && r<10 && c<10) wall=true;
+      if(r===0||r===N-1||c===0||c===N-1) wall=true;
+      else if(r%2===0 && c%2===0) wall=true;
       row.push(wall);
     }
     g.push(row);
@@ -197,12 +198,13 @@ function buildMazeWalls(){
 }
 function createMaze(){
   var CELL=30;
+  var N=11, OFF=(CW-N*CELL)/2;
   var walls=buildMazeWalls();
   var m={
     idx:0, invuln:0,
     canMove:function(r,c,dir){
       var d=DIRV[dir], nr=r+d.dr, nc=c+d.dc;
-      if(nr<0||nr>=12||nc<0||nc>=12) return false;
+      if(nr<0||nr>=N||nc<0||nc>=N) return false;
       return !walls[nr][nc];
     },
     reset:function(){
@@ -210,7 +212,7 @@ function createMaze(){
       this.totalDots=0;
       for(var r=0;r<12;r++){
         var row=[];
-        for(var c=0;c<12;c++){
+        for(var c=0;c<N;c++){
           var open=!walls[r][c];
           row.push(open);
           if(open) this.totalDots++;
@@ -225,6 +227,7 @@ function createMaze(){
       this.playerTimer=0; this.ghostTimer=0;
       this.lives=STAGES[this.idx].lives;
       this.invuln=0;
+      queuedDir=null;
     },
     onHit:function(){
       this.player.r=1;this.player.c=1;this.player.pr=1;this.player.pc=1;
@@ -237,10 +240,12 @@ function createMaze(){
       if(this.playerTimer>=this.moveInterval){
         this.playerTimer=0;
         this.player.pr=this.player.r; this.player.pc=this.player.c;
-        var desired=null;
+        var desired=queuedDir;
+      if(!desired){
         if(keys.up) desired="up"; else if(keys.down) desired="down";
         else if(keys.left) desired="left"; else if(keys.right) desired="right";
-        if(desired && this.canMove(this.player.r,this.player.c,desired)) this.player.dir=desired;
+      }
+      if(desired && this.canMove(this.player.r,this.player.c,desired)){ this.player.dir=desired; queuedDir=null; }
         if(this.player.dir && this.canMove(this.player.r,this.player.c,this.player.dir)){
           var d=DIRV[this.player.dir];
           this.player.r+=d.dr; this.player.c+=d.dc;
@@ -277,7 +282,8 @@ function createMaze(){
     },
     draw:function(ctx){
       ctx.fillStyle="#0A0510"; ctx.fillRect(0,0,CW,CH);
-      for(var r=0;r<12;r++) for(var c=0;c<12;c++){
+      ctx.save(); ctx.translate(OFF,OFF);
+      for(var r=0;r<N;r++) for(var c=0;c<N;c++){
         if(walls[r][c]){ ctx.fillStyle="#251236"; ctx.fillRect(c*CELL,r*CELL,CELL,CELL); }
         else if(this.dots[r][c]){ ctx.fillStyle="#F2C744"; ctx.beginPath(); ctx.arc(c*CELL+CELL/2,r*CELL+CELL/2,3,0,7); ctx.fill(); }
       }
@@ -299,6 +305,7 @@ function createMaze(){
       ctx.beginPath(); ctx.moveTo(px-6,py-4); ctx.lineTo(px-2,py-4); ctx.lineTo(px-4,py-1); ctx.closePath(); ctx.fill();
       ctx.beginPath(); ctx.moveTo(px+2,py-4); ctx.lineTo(px+6,py-4); ctx.lineTo(px+4,py-1); ctx.closePath(); ctx.fill();
       ctx.fillStyle="#4ADE80"; ctx.fillRect(px-1.5,py-14,3,4);
+      ctx.restore();
       ctx.textAlign="left"; ctx.textBaseline="alphabetic";
       ctx.fillStyle="#EFE6E9"; ctx.font="10px 'Press Start 2P'";
       ctx.fillText("ALMAS "+this.eaten+"/"+this.target,6,14);
