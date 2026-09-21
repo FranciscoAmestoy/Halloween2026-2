@@ -210,7 +210,7 @@ function createMaze(){
     reset:function(){
       this.dots=[];
       this.totalDots=0;
-      for(var r=0;r<12;r++){
+      for(var r=0;r<N;r++){
         var row=[];
         for(var c=0;c<N;c++){
           var open=!walls[r][c];
@@ -241,11 +241,11 @@ function createMaze(){
         this.playerTimer=0;
         this.player.pr=this.player.r; this.player.pc=this.player.c;
         var desired=queuedDir;
-      if(!desired){
-        if(keys.up) desired="up"; else if(keys.down) desired="down";
-        else if(keys.left) desired="left"; else if(keys.right) desired="right";
-      }
-      if(desired && this.canMove(this.player.r,this.player.c,desired)){ this.player.dir=desired; queuedDir=null; }
+        if(!desired){
+          if(keys.up) desired="up"; else if(keys.down) desired="down";
+          else if(keys.left) desired="left"; else if(keys.right) desired="right";
+        }
+        if(desired && this.canMove(this.player.r,this.player.c,desired)){ this.player.dir=desired; queuedDir=null; }
         if(this.player.dir && this.canMove(this.player.r,this.player.c,this.player.dir)){
           var d=DIRV[this.player.dir];
           this.player.r+=d.dr; this.player.c+=d.dc;
